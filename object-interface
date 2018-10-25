@@ -1,0 +1,161 @@
+var _libCommons = (function(){
+    var _callAjax,_drawCombo,_callAlert;
+
+     _callAjax = function (xhr, params, method, type,callback) {
+        var ret;
+        $.ajax({
+            dataType: type,
+            url: xhr,
+            type: method,
+            data: params,
+            async: false,
+            beforeSend: function () {
+                $('.loading').show();
+            },
+            success: function (result) {
+                ret = result;
+
+            },
+            error: function (request, status, error) {
+                ret = 'error ' + error;
+                return false;
+            },
+            complete: function () {
+                $('.loading').hide();
+            }
+        });
+                //callback alternativo
+            if(typeof callback == 'function' && callback()){
+                callback();
+            }
+
+        return ret;
+    }
+
+    _drawCombo = function(json,target,enableWrite){//ultimo parametro para habilitar edicao e pega o ultimo argumento para verificar o campo habilitado
+
+        var html;
+
+        html = '';
+        $.each(json, function (index, content) {
+           
+             html += '<option value="' +content.CODBAIRRO+ '">' +content.NOME+ '</option>';
+        });
+
+        if(enableWrite){
+           html  +='<option value="-1">OUTRO</option>';
+        }
+        //Adiciona html ao combo
+        $(target).html(html);
+        
+    }
+    
+     _callAlert = function (msg, type) {
+        var html, body;
+
+        body = $("html, body");
+        mensagem = $('#block-message');
+        html = '<div class="alert ' + type + '">';
+        html += msg;
+        html += '</div>';
+
+        var callBackTimeOut = function (param) {
+            return function () {
+                $(param).toggle();
+                $(param).empty();
+            }
+        }
+
+
+        mensagem.append(html).slideDown(100, function () {
+   
+            return setTimeout(callBackTimeOut(this), 5000);
+        });
+
+
+    }
+
+
+     _drawAttach = function(json,jsonp,target,callback){
+
+        var html='';
+
+        
+
+        $.each(json.RESULT, function (index, content) {
+           
+        
+            html +='<div class="form-row">';
+                html +='<div class="form-group col-sm mb-12">';
+                    html +='<label for="'+content.CODCAMPO+'">'+content.DESCRICAO.toLowerCase().split(' ').map((s) => s.charAt(0).toUpperCase() + s.substring(1)).join(' ')+'</label>';
+                     html +='<input   id="'+content.CODCAMPO+'" data-codinscricao="'+getCookie('codinscricao')+'" data-comp="'+content.CODCOMPONENTE+'" data-evento="'+content.CODEVENTO+'" name="'+content.CODCAMPO+'" class="form-control arquivo-coditem" type="file">';
+                     html+='<p style="text-align: justify; background:palegoldenrod; padding:13px; margin-top:5px; border-radius:5px;">'+content.AJUDA+'</p>';
+
+                     $.each(jsonp, function (idx, ctn) {
+                                    
+                        if(ctn.CODCAMPO === content.CODCAMPO){
+
+                            html+='<div class="alert alert-info">'+ctn.NOMEARQ;
+                                html +='<a href="javascript:;" onclick="downloadAnexo($(this));" data-codanexo="'+ctn.CODCAMPO+'|'+ctn.CODEVENTO+'|'+ctn.CODINSCRICAO+'|'+ctn.SEQUENCIA+'" ><span class="icon-download fa fa-download fa-lg"></span></a>';
+                                html +='<a href="javascript:;" onclick="deleteAnexo($(this));" data-codanexo="'+ctn.CODCAMPO+'|'+ctn.CODEVENTO+'|'+ctn.CODINSCRICAO+'|'+ctn.SEQUENCIA+'"><span class="icon-remove fa fa-trash fa-lg"></span></a>';
+                            html+='</div>';
+                            
+                        }
+                       
+                });
+
+                html +='</div>';
+            html +='</div>';
+        });
+
+       
+        //Adiciona html ao combo
+        $(target).html(html);
+
+
+        if (!document.getElementById('contact-tab').hasAttribute('data-toggle="tab"')) {           
+                document.getElementById('contact-tab').setAttribute('data-toggle','tab');
+                document.getElementById('contact-tab').click();
+        }//else if(typeof callback == 'function' && callback()){
+           //     callback();
+        //}
+    }
+    
+     _loadAttach = function(insc,curso){
+        var params = {
+            codcurso : curso,
+            codinscrito:insc,
+            act:'carregaAnexos'
+       };    
+    
+       var  result =  _callAjax("controllerAjax.php", params, 'POST', 'json');
+
+       var param = {
+        act:'retornaAnexos',
+        codinscricao:insc,
+        evento : curso
+    };    
+        
+     var  res =  _callAjax("controllerAjax.php", param, 'POST', 'json');
+       _drawAttach(result,res,$('.anexos-body'),$('#contact-tab').trigger('click'));//desenha os anexos e dispara troca de aba
+    }
+
+
+
+    return {
+        ajaxCall:function (xhr, params, method, type){
+           return _callAjax(xhr, params, method, type);
+        },
+        drawSelect:function(json,target,enableWrite){
+            _drawCombo(json,target,enableWrite);
+        },
+        callAlert:function(msg,alert){
+            _callAlert(msg,alert);
+        },
+        loadAttach:function(inscricao,codCurso){
+            _loadAttach(inscricao,codCurso);
+        }
+    }
+
+
+}());
